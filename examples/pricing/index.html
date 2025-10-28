@@ -446,33 +446,40 @@
     </div>
 
     <script>
-        // TODO: Replace with your actual Stripe publishable key
-        const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY_HERE');
+        // Stripe publishable key (live mode)
+        const stripe = Stripe('pk_live_51SNFHRGWvG7njsH8o9vJcSxz9ADDGXt2yT1FFmzUXO3iH1dvvEpOyKOhTQNe4pAdsd7ygsuY1EH7fk7YdO47wyOT00smiNWsHU');
 
         async function checkout(plan) {
-            // For now, just show a coming soon message
-            // You'll replace this with actual Stripe checkout
-            alert(`Stripe checkout for ${plan} plan coming soon!\n\nFor early access, email hello@authgrid.net`);
+            try {
+                // Create checkout session
+                const response = await fetch('https://authgrid-api.fly.dev/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ plan: plan })
+                });
 
-            /*
-            // Actual Stripe checkout code (uncomment when ready):
-            const response = await fetch('https://authgrid-api.fly.dev/create-checkout-session', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ plan: plan })
-            });
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Error: ${error.error || 'Failed to create checkout session'}`);
+                    return;
+                }
 
-            const session = await response.json();
-            const result = await stripe.redirectToCheckout({
-                sessionId: session.id
-            });
+                const session = await response.json();
 
-            if (result.error) {
-                alert(result.error.message);
+                // Redirect to Stripe checkout
+                const result = await stripe.redirectToCheckout({
+                    sessionId: session.id
+                });
+
+                if (result.error) {
+                    alert(result.error.message);
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Failed to start checkout. Please try again or contact hello@authgrid.net');
             }
-            */
         }
     </script>
 </body>

@@ -63,6 +63,10 @@ func main() {
 	// User lookup (optional, for public key retrieval)
 	r.HandleFunc("/user/{handle}", getUserHandler).Methods("GET")
 
+	// Stripe payment endpoints
+	r.HandleFunc("/create-checkout-session", rateLimitMiddleware(createCheckoutSessionHandler)).Methods("POST")
+	r.HandleFunc("/stripe-webhook", stripeWebhookHandler).Methods("POST")
+
 	// CORS configuration
 	// Allow requests from authgrid.org frontend
 	allowedOrigins := []string{
