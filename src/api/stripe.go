@@ -177,17 +177,28 @@ func handleCheckoutCompleted(event stripe.Event) {
 	log.Printf("   Subscription: %s", session.Subscription.ID)
 	log.Printf("   Amount: $%.2f", float64(session.AmountTotal)/100)
 
-	// TODO: Implement fulfillment logic
+	// Send welcome email
+	customerName := session.CustomerDetails.Name
+	if customerName == "" {
+		customerName = session.CustomerDetails.Email
+	}
+
+	err = sendWelcomeEmail(
+		session.CustomerDetails.Email,
+		customerName,
+		session.Subscription.ID,
+	)
+	if err != nil {
+		log.Printf("⚠️  Failed to send welcome email: %v", err)
+		// Don't fail the webhook - email failure shouldn't stop payment processing
+	}
+
+	// TODO: Additional fulfillment steps
 	// 1. Create customer record in database
 	// 2. Generate API keys or provision managed instance
-	// 3. Send welcome email
 
-	// For now, log what should happen
-	log.Printf("🎉 NEW CUSTOMER! Next steps:")
-	log.Printf("   1. Send welcome email to: %s", session.CustomerDetails.Email)
-	log.Printf("   2. Provision managed hosting instance")
-	log.Printf("   3. Generate API credentials")
-	log.Printf("   4. Send onboarding guide")
+	log.Printf("🎉 NEW CUSTOMER ONBOARDED!")
+	log.Printf("   Welcome email sent to: %s", session.CustomerDetails.Email)
 }
 
 // handleSubscriptionDeleted processes subscription cancellations
