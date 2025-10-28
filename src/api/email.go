@@ -26,8 +26,10 @@ func sendWelcomeEmail(customerEmail, customerName, subscriptionID string) error 
 	}
 
 	// Create welcome email
+	// Using Resend's onboarding domain temporarily (works immediately)
+	// After domain verification in Resend, switch to: "Authgrid <hello@authgrid.net>"
 	email := ResendEmail{
-		From:    "Authgrid <hello@authgrid.net>",
+		From:    "Authgrid <onboarding@resend.dev>",
 		To:      []string{customerEmail},
 		Subject: "🎉 Welcome to Authgrid!",
 		HTML:    generateWelcomeEmailHTML(customerName, subscriptionID),
