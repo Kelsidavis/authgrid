@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authgrid Pricing - Passwordless Authentication</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+        }
+
+        .pricing-card.featured {
+            border: 3px solid #667eea;
+        }
+
+        .badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .plan-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .plan-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        .price {
+            font-size: 48px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .price-small {
+            font-size: 18px;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .features {
+            list-style: none;
+            margin: 30px 0;
+            padding: 0;
+        }
+
+        .features li {
+            padding: 12px 0;
+            color: #333;
+            font-size: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .features li:last-child {
+            border-bottom: none;
+        }
+
+        .features li::before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .cta-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .cta-button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .faq {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-top: 60px;
+        }
+
+        .faq h2 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .faq-item {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+
+        .faq-question {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .faq-answer {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .comparison {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-top: 40px;
+        }
+
+        .comparison h2 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .comparison-table .highlight {
+            background: #e3f2fd;
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 60px;
+            opacity: 0.8;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 36px;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Simple, Transparent Pricing</h1>
+            <p class="subtitle">Start free. Scale when you need to. No hidden fees.</p>
+        </header>
+
+        <div class="pricing-grid">
+            <!-- Free Tier -->
+            <div class="pricing-card">
+                <div class="plan-name">Open Source</div>
+                <div class="plan-description">Perfect for developers and small projects</div>
+                <div class="price">$0<span class="price-small">/month</span></div>
+                <ul class="features">
+                    <li>Unlimited users</li>
+                    <li>Self-hosted</li>
+                    <li>All core features</li>
+                    <li>Community support</li>
+                    <li>Deploy anywhere</li>
+                    <li>Open source (MIT)</li>
+                </ul>
+                <button class="cta-button secondary" onclick="window.location.href='https://github.com/Kelsidavis/authgrid'">
+                    Get Started Free
+                </button>
+            </div>
+
+            <!-- Starter Tier -->
+            <div class="pricing-card featured">
+                <span class="badge">Most Popular</span>
+                <div class="plan-name">Starter</div>
+                <div class="plan-description">Managed hosting - we handle everything</div>
+                <div class="price">$29<span class="price-small">/month</span></div>
+                <ul class="features">
+                    <li>Everything in Free</li>
+                    <li>Managed hosting</li>
+                    <li>10,000 MAU included</li>
+                    <li>Custom domain</li>
+                    <li>Email support (48hr)</li>
+                    <li>99.9% uptime SLA</li>
+                    <li>Automatic backups</li>
+                </ul>
+                <button class="cta-button" onclick="checkout('starter')">
+                    Start 14-Day Trial
+                </button>
+            </div>
+
+            <!-- Pro Tier -->
+            <div class="pricing-card">
+                <div class="plan-name">Pro</div>
+                <div class="plan-description">For growing teams and applications</div>
+                <div class="price">$99<span class="price-small">/month</span></div>
+                <ul class="features">
+                    <li>Everything in Starter</li>
+                    <li>100,000 MAU included</li>
+                    <li>SSO/SAML bridges</li>
+                    <li>White-label option</li>
+                    <li>Priority support (12hr)</li>
+                    <li>Advanced analytics</li>
+                    <li>Custom integrations</li>
+                </ul>
+                <button class="cta-button" onclick="checkout('pro')">
+                    Start 14-Day Trial
+                </button>
+            </div>
+
+            <!-- Enterprise Tier -->
+            <div class="pricing-card">
+                <div class="plan-name">Enterprise</div>
+                <div class="plan-description">For companies with custom needs</div>
+                <div class="price">Custom</div>
+                <ul class="features">
+                    <li>Everything in Pro</li>
+                    <li>Unlimited MAU</li>
+                    <li>On-premise deployment</li>
+                    <li>SOC 2 compliance</li>
+                    <li>99.99% uptime SLA</li>
+                    <li>Dedicated support</li>
+                    <li>Custom contract</li>
+                </ul>
+                <button class="cta-button" onclick="window.location.href='mailto:hello@authgrid.net?subject=Enterprise Inquiry'">
+                    Contact Sales
+                </button>
+            </div>
+        </div>
+
+        <!-- Comparison vs Auth0 -->
+        <div class="comparison">
+            <h2>How We Compare to Auth0</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th class="highlight">Authgrid</th>
+                        <th>Auth0</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Starter Price</td>
+                        <td class="highlight">$29/month</td>
+                        <td>$25/month (limited features)</td>
+                    </tr>
+                    <tr>
+                        <td>Free MAU</td>
+                        <td class="highlight">10,000</td>
+                        <td>7,500</td>
+                    </tr>
+                    <tr>
+                        <td>Self-Hosted Option</td>
+                        <td class="highlight">✓ Free</td>
+                        <td>✗ Enterprise only</td>
+                    </tr>
+                    <tr>
+                        <td>Open Source</td>
+                        <td class="highlight">✓ MIT License</td>
+                        <td>✗ Proprietary</td>
+                    </tr>
+                    <tr>
+                        <td>Setup Time</td>
+                        <td class="highlight">5 minutes</td>
+                        <td>30+ minutes</td>
+                    </tr>
+                    <tr>
+                        <td>Passwordless Auth</td>
+                        <td class="highlight">✓ Built-in</td>
+                        <td>✓ Add-on cost</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- FAQ -->
+        <div class="faq">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <div class="faq-question">What counts as a Monthly Active User (MAU)?</div>
+                <div class="faq-answer">
+                    A Monthly Active User is a unique user who authenticates at least once during a calendar month.
+                    If the same user authenticates 100 times in a month, they only count as 1 MAU.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Can I start with the free tier and upgrade later?</div>
+                <div class="faq-answer">
+                    Absolutely! You can self-host for free forever, and upgrade to managed hosting when you're ready.
+                    Your data seamlessly migrates when you upgrade.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What happens if I exceed my MAU limit?</div>
+                <div class="faq-answer">
+                    We'll notify you when you reach 80% of your limit. If you exceed it, we'll automatically upgrade
+                    you to the next tier (with 7 days notice). No surprise shutdowns or overage fees.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Do you offer refunds?</div>
+                <div class="faq-answer">
+                    Yes! If you're not satisfied within the first 30 days, we'll refund you 100%.
+                    No questions asked.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Can I cancel anytime?</div>
+                <div class="faq-answer">
+                    Yes. Cancel anytime with one click. No long-term contracts or cancellation fees.
+                    Your data remains accessible for 30 days after cancellation.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Is my data secure?</div>
+                <div class="faq-answer">
+                    Yes. We never store passwords (passwordless!). Private keys never leave user devices.
+                    All data is encrypted at rest and in transit. We're working on SOC 2 compliance.
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>Authgrid</strong> - Passwords die here.</p>
+            <p><a href="https://github.com/Kelsidavis/authgrid">Open Source</a> ·
+               <a href="https://authgrid-api.fly.dev/health">Status</a> ·
+               <a href="mailto:hello@authgrid.net">Contact</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // TODO: Replace with your actual Stripe publishable key
+        const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY_HERE');
+
+        async function checkout(plan) {
+            // For now, just show a coming soon message
+            // You'll replace this with actual Stripe checkout
+            alert(`Stripe checkout for ${plan} plan coming soon!\n\nFor early access, email hello@authgrid.net`);
+
+            /*
+            // Actual Stripe checkout code (uncomment when ready):
+            const response = await fetch('https://authgrid-api.fly.dev/create-checkout-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ plan: plan })
+            });
+
+            const session = await response.json();
+            const result = await stripe.redirectToCheckout({
+                sessionId: session.id
+            });
+
+            if (result.error) {
+                alert(result.error.message);
+            }
+            */
+        }
+    </script>
+</body>
+</html>
