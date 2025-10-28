@@ -73,9 +73,9 @@ func createCheckoutSessionHandler(w http.ResponseWriter, r *http.Request) {
 		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
 			TrialPeriodDays: stripe.Int64(14), // 14-day free trial
 		},
-		AllowPromotionCodes: stripe.Bool(true),
+		AllowPromotionCodes:      stripe.Bool(true),
 		BillingAddressCollection: stripe.String("auto"),
-		CustomerEmail: stripe.String(""), // Optional: prefill if user is logged in
+		// CustomerEmail can be added here if user is logged in
 	}
 
 	sess, err := session.New(params)
