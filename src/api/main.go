@@ -53,8 +53,17 @@ func main() {
 	r.HandleFunc("/user/{handle}", getUserHandler).Methods("GET")
 
 	// CORS configuration
+	// Allow requests from authgrid.org frontend
+	allowedOrigins := []string{
+		"https://authgrid.org",
+		"https://www.authgrid.org",
+		"https://authgrid-api.fly.dev", // Fly.io deployment
+		"http://localhost:3000",        // Local development
+		"null",                          // For local file:// testing
+	}
+
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // In production, specify exact origins
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -65,8 +74,9 @@ func main() {
 
 	// Start server
 	port := getEnv("PORT", "8080")
-	log.Printf("Authgrid API server starting on port %s", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
+	addr := "0.0.0.0:" + port
+	log.Printf("Authgrid API server starting on %s", addr)
+	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}
 }

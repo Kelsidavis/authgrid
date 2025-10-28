@@ -266,11 +266,16 @@
         </div>
     </div>
 
+    <!-- Configuration: Edit config.js to set your API URL -->
+    <script src="/config.js"></script>
     <script src="/authgrid.js"></script>
     <script>
+        // Read API URL from config.js (fallback to localhost if not set)
+        const API_URL = window.AUTHGRID_API_URL || 'http://localhost:8080';
+
         // Initialize Authgrid client
         const authgrid = new AuthgridClient({
-            apiUrl: 'http://localhost:8080'
+            apiUrl: API_URL
         });
 
         // Elements
