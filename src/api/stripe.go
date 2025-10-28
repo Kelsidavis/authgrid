@@ -120,9 +120,16 @@ func stripeWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	var event stripe.Event
 
 	if webhookSecret != "" {
-		// Verify signature
+		// Verify signature (ignore API version mismatch - safe for basic events)
 		signatureHeader := r.Header.Get("Stripe-Signature")
-		event, err = stripeWebhook.ConstructEvent(payload, signatureHeader, webhookSecret)
+		event, err = stripeWebhook.ConstructEventWithOptions(
+			payload,
+			signatureHeader,
+			webhookSecret,
+			stripeWebhook.ConstructEventOptions{
+				IgnoreAPIVersionMismatch: true,
+			},
+		)
 		if err != nil {
 			log.Printf("Webhook signature verification failed: %v", err)
 			respondError(w, http.StatusBadRequest, "Invalid signature")
