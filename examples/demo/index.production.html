@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authgrid - Passwordless Authentication</title>
+    <meta name="description" content="Passwordless authentication using cryptographic keys. No passwords, no emails, just secure authentication.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .handle-display {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .stored-handles {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .stored-handles-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .handle-item {
+            padding: 8px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .handle-item:hover {
+            border-color: #667eea;
+        }
+
+        .handle-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Authgrid</h1>
+        <p class="subtitle">Passwordless authentication using cryptographic keys</p>
+
+        <!-- Registration Section -->
+        <div class="section">
+            <div class="section-title">Register New User</div>
+            <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                Generate a new cryptographic keypair and receive your unique handle.
+            </p>
+            <button id="registerBtn">Register Now</button>
+            <div id="registerResult" class="result"></div>
+        </div>
+
+        <!-- Login Section -->
+        <div class="section">
+            <div class="section-title">Login</div>
+
+            <div id="storedHandlesContainer" class="stored-handles" style="display: none;">
+                <div class="stored-handles-title">Your Stored Handles (click to select)</div>
+                <div id="storedHandlesList"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="handleInput">Handle</label>
+                <input
+                    type="text"
+                    id="handleInput"
+                    placeholder="your-handle@authgrid.org"
+                    autocomplete="off"
+                />
+            </div>
+            <button id="loginBtn">Login</button>
+            <div id="loginResult" class="result"></div>
+        </div>
+
+        <div class="footer">
+            <strong>Authgrid</strong> - Passwords die here.<br>
+            <a href="https://github.com/Kelsidavis/authgrid" target="_blank">View on GitHub</a>
+        </div>
+    </div>
+
+    <script src="/authgrid.js"></script>
+    <script>
+        // Initialize Authgrid client with production API
+        const authgrid = new AuthgridClient({
+            apiUrl: 'https://api.authgrid.org'
+        });
+
+        // Elements
+        const registerBtn = document.getElementById('registerBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const handleInput = document.getElementById('handleInput');
+        const registerResult = document.getElementById('registerResult');
+        const loginResult = document.getElementById('loginResult');
+        const storedHandlesContainer = document.getElementById('storedHandlesContainer');
+        const storedHandlesList = document.getElementById('storedHandlesList');
+
+        // Load and display stored handles
+        function updateStoredHandles() {
+            const handles = authgrid.getStoredHandles();
+            if (handles.length > 0) {
+                storedHandlesContainer.style.display = 'block';
+                storedHandlesList.innerHTML = handles
+                    .map(handle => `<div class="handle-item" data-handle="${handle}">${handle}</div>`)
+                    .join('');
+
+                // Add click handlers
+                document.querySelectorAll('.handle-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        handleInput.value = item.dataset.handle;
+                    });
+                });
+            } else {
+                storedHandlesContainer.style.display = 'none';
+            }
+        }
+
+        // Show result message
+        function showResult(element, type, message) {
+            element.className = `result show ${type}`;
+            element.innerHTML = message;
+        }
+
+        // Hide result message
+        function hideResult(element) {
+            element.className = 'result';
+        }
+
+        // Registration
+        registerBtn.addEventListener('click', async () => {
+            hideResult(registerResult);
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = 'Registering<span class="loading"></span>';
+
+            try {
+                const result = await authgrid.register();
+
+                showResult(registerResult, 'success', `
+                    <strong>✓ Registration successful!</strong><br>
+                    Your handle: <div class="handle-display">${result.handle}</div>
+                    <span class="badge">Keypair stored in browser</span>
+                `);
+
+                // Update stored handles list
+                updateStoredHandles();
+
+                // Pre-fill login field
+                handleInput.value = result.handle;
+            } catch (error) {
+                showResult(registerResult, 'error', `
+                    <strong>✗ Registration failed</strong><br>
+                    ${error.message}
+                `);
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = 'Register Now';
+            }
+        });
+
+        // Login
+        loginBtn.addEventListener('click', async () => {
+            const handle = handleInput.value.trim();
+
+            if (!handle) {
+                showResult(loginResult, 'error', 'Please enter your handle');
+                return;
+            }
+
+            hideResult(loginResult);
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = 'Logging in<span class="loading"></span>';
+
+            try {
+                const result = await authgrid.authenticate(handle);
+
+                showResult(loginResult, 'success', `
+                    <strong>✓ Login successful!</strong><br>
+                    Token: <code style="word-break: break-all; font-size: 11px;">${result.token.substring(0, 50)}...</code><br>
+                    <span class="badge">Authenticated</span>
+                `);
+
+                // Store token for later use
+                sessionStorage.setItem('authgrid_token', result.token);
+            } catch (error) {
+                showResult(loginResult, 'error', `
+                    <strong>✗ Login failed</strong><br>
+                    ${error.message}
+                `);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Login';
+            }
+        });
+
+        // Initialize
+        updateStoredHandles();
+
+        // Auto-fill first handle if available
+        const handles = authgrid.getStoredHandles();
+        if (handles.length > 0 && !handleInput.value) {
+            handleInput.value = handles[0];
+        }
+    </script>
+</body>
+</html>

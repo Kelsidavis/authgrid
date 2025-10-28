@@ -1,0 +1,72 @@
+# Authgrid .gitignore
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres-data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+/target/
+/dist/
+/build/
+/bin/
+*.exe
+/authgrid
+authgrid-cli
+
+# Dependencies
+node_modules/
+vendor/
+go.sum
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+*.test
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Package files
+*.tar.gz
+*.zip
+
+# Internal business documents (not for public repo)
+BUSINESS.md
+STRATEGY.md
+VISION.md
+ROADMAP.md

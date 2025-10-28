@@ -1,0 +1,50 @@
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: authgrid-postgres
+    environment:
+      POSTGRES_USER: authgrid
+      POSTGRES_PASSWORD: authgrid
+      POSTGRES_DB: authgrid
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authgrid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Authgrid API server
+  api:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile
+    container_name: authgrid-api
+    environment:
+      DATABASE_URL: "postgres://authgrid:authgrid@postgres:5432/authgrid?sslmode=disable"
+      PORT: "8080"
+      AUTHGRID_DOMAIN: "authgrid.net"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Demo web server (nginx serving static files)
+  demo:
+    image: nginx:alpine
+    container_name: authgrid-demo
+    ports:
+      - "3000:80"
+    volumes:
+      - ./examples/demo:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
