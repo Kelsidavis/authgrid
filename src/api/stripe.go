@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
+	stripeWebhook "github.com/stripe/stripe-go/v76/webhook"
 )
 
 // Plan prices (in cents)
@@ -97,26 +99,132 @@ func stripeWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 
-	payload, err := json.Marshal(r.Body)
+	payload, err := io.ReadAll(r.Body)
 	if err != nil {
+		log.Printf("Error reading webhook body: %v", err)
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	// Verify webhook signature
+	// Set Stripe API key
+	stripeKey := os.Getenv("STRIPE_SECRET_KEY")
+	if stripeKey == "" {
+		log.Println("ERROR: STRIPE_SECRET_KEY not set")
+		respondError(w, http.StatusInternalServerError, "Payment system not configured")
+		return
+	}
+	stripe.Key = stripeKey
+
+	// Verify webhook signature (important for security!)
 	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
-	if webhookSecret == "" {
-		log.Println("WARNING: STRIPE_WEBHOOK_SECRET not set - webhook signature verification skipped")
+	var event stripe.Event
+
+	if webhookSecret != "" {
+		// Verify signature
+		signatureHeader := r.Header.Get("Stripe-Signature")
+		event, err = stripeWebhook.ConstructEvent(payload, signatureHeader, webhookSecret)
+		if err != nil {
+			log.Printf("Webhook signature verification failed: %v", err)
+			respondError(w, http.StatusBadRequest, "Invalid signature")
+			return
+		}
+	} else {
+		// No signature verification (not recommended for production!)
+		log.Println("WARNING: Webhook signature verification skipped - STRIPE_WEBHOOK_SECRET not set")
+		err = json.Unmarshal(payload, &event)
+		if err != nil {
+			log.Printf("Error parsing webhook JSON: %v", err)
+			respondError(w, http.StatusBadRequest, "Invalid JSON")
+			return
+		}
 	}
 
-	// TODO: Implement webhook event handling
-	// Example events to handle:
-	// - checkout.session.completed: User completed payment
-	// - customer.subscription.deleted: User canceled subscription
-	// - invoice.payment_succeeded: Monthly payment succeeded
-	// - invoice.payment_failed: Payment failed
-
-	log.Printf("Received Stripe webhook: %s", string(payload))
+	// Handle different event types
+	switch event.Type {
+	case "checkout.session.completed":
+		handleCheckoutCompleted(event)
+	case "customer.subscription.deleted":
+		handleSubscriptionDeleted(event)
+	case "invoice.payment_succeeded":
+		handlePaymentSucceeded(event)
+	case "invoice.payment_failed":
+		handlePaymentFailed(event)
+	default:
+		log.Printf("Unhandled webhook event type: %s", event.Type)
+	}
 
 	respondJSON(w, http.StatusOK, map[string]string{"received": "true"})
+}
+
+// handleCheckoutCompleted processes successful checkouts
+func handleCheckoutCompleted(event stripe.Event) {
+	var session stripe.CheckoutSession
+	err := json.Unmarshal(event.Data.Raw, &session)
+	if err != nil {
+		log.Printf("Error parsing checkout.session.completed: %v", err)
+		return
+	}
+
+	log.Printf("✅ Payment successful!")
+	log.Printf("   Customer: %s", session.CustomerDetails.Email)
+	log.Printf("   Subscription: %s", session.Subscription.ID)
+	log.Printf("   Amount: $%.2f", float64(session.AmountTotal)/100)
+
+	// TODO: Implement fulfillment logic
+	// 1. Create customer record in database
+	// 2. Generate API keys or provision managed instance
+	// 3. Send welcome email
+
+	// For now, log what should happen
+	log.Printf("🎉 NEW CUSTOMER! Next steps:")
+	log.Printf("   1. Send welcome email to: %s", session.CustomerDetails.Email)
+	log.Printf("   2. Provision managed hosting instance")
+	log.Printf("   3. Generate API credentials")
+	log.Printf("   4. Send onboarding guide")
+}
+
+// handleSubscriptionDeleted processes subscription cancellations
+func handleSubscriptionDeleted(event stripe.Event) {
+	var subscription stripe.Subscription
+	err := json.Unmarshal(event.Data.Raw, &subscription)
+	if err != nil {
+		log.Printf("Error parsing customer.subscription.deleted: %v", err)
+		return
+	}
+
+	log.Printf("❌ Subscription canceled: %s", subscription.ID)
+	log.Printf("   Customer: %s", subscription.Customer.Email)
+
+	// TODO: Deprovision resources, send cancellation confirmation email
+}
+
+// handlePaymentSucceeded processes successful recurring payments
+func handlePaymentSucceeded(event stripe.Event) {
+	var invoice stripe.Invoice
+	err := json.Unmarshal(event.Data.Raw, &invoice)
+	if err != nil {
+		log.Printf("Error parsing invoice.payment_succeeded: %v", err)
+		return
+	}
+
+	log.Printf("💰 Payment succeeded: $%.2f", float64(invoice.AmountPaid)/100)
+	log.Printf("   Customer: %s", invoice.CustomerEmail)
+
+	// TODO: Send receipt email
+}
+
+// handlePaymentFailed processes failed payments
+func handlePaymentFailed(event stripe.Event) {
+	var invoice stripe.Invoice
+	err := json.Unmarshal(event.Data.Raw, &invoice)
+	if err != nil {
+		log.Printf("Error parsing invoice.payment_failed: %v", err)
+		return
+	}
+
+	log.Printf("⚠️  Payment failed!")
+	log.Printf("   Customer: %s", invoice.CustomerEmail)
+	log.Printf("   Amount: $%.2f", float64(invoice.AmountDue)/100)
+
+	// TODO: Send payment failed email, retry logic
 }
