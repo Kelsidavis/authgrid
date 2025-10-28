@@ -20,7 +20,7 @@ var (
 )
 
 func main() {
-	// Initialize database
+	// Initialize database with retry logic
 	var err error
 	dbURL := getEnv("DATABASE_URL", "postgres://authgrid:authgrid@localhost:5432/authgrid?sslmode=disable")
 	db, err = sql.Open("postgres", dbURL)
@@ -29,11 +29,22 @@ func main() {
 	}
 	defer db.Close()
 
-	// Test database connection
-	if err := db.Ping(); err != nil {
-		log.Fatal("Failed to ping database:", err)
+	// Test database connection with retries (wait for DB to be ready)
+	maxRetries := 30
+	retryDelay := 2 * time.Second
+	for i := 0; i < maxRetries; i++ {
+		err = db.Ping()
+		if err == nil {
+			log.Println("Successfully connected to database")
+			break
+		}
+		if i < maxRetries-1 {
+			log.Printf("Failed to ping database (attempt %d/%d): %v. Retrying in %v...", i+1, maxRetries, err, retryDelay)
+			time.Sleep(retryDelay)
+		} else {
+			log.Fatal("Failed to ping database after", maxRetries, "attempts:", err)
+		}
 	}
-	log.Println("Successfully connected to database")
 
 	// Initialize rate limiter (100 requests per second)
 	limiter = rate.NewLimiter(100, 200)
